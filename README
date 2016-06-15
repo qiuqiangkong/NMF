@@ -1,0 +1,8 @@
+2016.06.15
+This is a BSD liscenced NMF toolkit in python. 
+Some of functions are translations of nmflib in matlab. 
+
+including:
+(1) Euclidean divergence
+(2) KL divergence
+(3) Beta divergence
