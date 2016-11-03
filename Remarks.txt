@@ -1,0 +1,5 @@
+2016.06.14
+I can not find a nmf toolkit good in use, so write this NMF toolkit in python myself. 
+Some are translation from nmflib in matlab. 
+
+2016.11.02 Add eps to avoid numerical error. 

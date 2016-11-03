@@ -4,8 +4,9 @@ SUMMARY:  Non negative matrix (NMF)
 AUTHOR:   Qiuqiang Kong
           q.kong@surrey.ac.uk
 Liscence: BSD
+Reference:https://github.com/audiofilter/nmflib
 Created:  2016.06.14
-Modified: -
+Modified: 2016.11.02 add verbose, add eps to avoid numerical Nan
 --------------------------------------
 Params:   V         F*N matrix, F, N is number of features, samples
           n_basis   rank of decomposition
@@ -30,12 +31,16 @@ def normalize( X, norm_X ):
         X /= np.sqrt( np.sum( X*X, axis=0 ) )
     return X
 
+def clip( X, eps ):
+    return np.clip( X, eps, np.inf )
+
 '''
 Euclidean distance. You can also use nmf_beta (beta=2), which is same.
 [1] Lee, Daniel D., and H. Sebastian Seung. "Algorithms for non-negative matrix factorization." 
 Advances in neural information processing systems. 2001.
 '''
-def nmf_euc( V, n_basis, n_iter=10, norm_W=0, norm_H=0, W0=None, H0=None, update_W=True, update_H=True ):
+def nmf_euc( V, n_basis, n_iter=10, norm_W=0, norm_H=0, W0=None, H0=None, update_W=True, update_H=True, verbose=0 ):
+    eps = 1e-8
     (F, N) = V.shape
     K = n_basis
     
@@ -45,8 +50,10 @@ def nmf_euc( V, n_basis, n_iter=10, norm_W=0, norm_H=0, W0=None, H0=None, update
     else: H = H0
     
     for n in xrange( n_iter ):
-        if update_W is True: W = W * np.dot( V, H.T ) / np.dot( np.dot( W, H ), H.T )
-        if update_H is True: H = H * np.dot( W.T, V ) / np.dot( np.dot( W.T, W ), H )
+        np.max( np.dot( np.dot( W.T, W ), H ), eps )
+        if verbose: print 'epoch', n
+        if update_W is True: W = W * np.dot( V, H.T ) / clip( np.dot( np.dot( W, H ), H.T ), eps )
+        if update_H is True: H = H * np.dot( W.T, V ) / clip( np.dot( np.dot( W.T, W ), H ), eps )
         if norm_W!=0: W = normalize( W, norm_W )
         if norm_H!=0: H = normalize( H, norm_H )
         
@@ -58,7 +65,8 @@ You can also use nmf_beta (beta=1), which is same.
 [1] Lee, Daniel D., and H. Sebastian Seung. "Algorithms for non-negative matrix factorization." 
 Advances in neural information processing systems. 2001.
 '''    
-def nmf_kl( V, n_basis, n_iter=10, norm_W=0, norm_H=0, W0=None, H0=None, update_W=True, update_H=True ):
+def nmf_kl( V, n_basis, n_iter=10, norm_W=0, norm_H=0, W0=None, H0=None, update_W=True, update_H=True, verbose=0 ):
+    eps = 1e-8
     (F, N) = V.shape
     K = n_basis
     
@@ -68,8 +76,9 @@ def nmf_kl( V, n_basis, n_iter=10, norm_W=0, norm_H=0, W0=None, H0=None, update_
     else: H = H0
     
     for n in xrange( n_iter ):
-        if update_W is True: W = W * ( np.dot( V / np.dot( W, H ), H.T ) / np.sum( H, axis=1 ) )
-        if update_H is True: H = H * ( np.dot( W.T, V / np.dot( W, H ) ) / np.sum( W, axis=0 )[:,None] )
+        if verbose: print 'epoch', n
+        if update_W is True: W = W * ( np.dot( V / clip( np.dot( W, H ), eps ), H.T ) / clip( np.sum( H, axis=1 ), eps ) )
+        if update_H is True: H = H * ( np.dot( W.T, V / clip( np.dot( W, H ), eps ) ) / clip( np.sum( W, axis=0 ), eps )[:,None] )
         if norm_W!=0: W = normalize( W, norm_W )
         if norm_H!=0: H = normalize( H, norm_H )
         
@@ -80,7 +89,8 @@ Beta divergence.
 [1] Fevotte, Cedric, Nancy Bertin, and Jean-Louis Durrieu. "Nonnegative matrix factorization with the 
 Itakura-Saito divergence: With application to music analysis." Neural computation 21.3 (2009): 793-830.
 '''
-def nmf_beta( V, n_basis, beta, n_iter=10, norm_W=0, norm_H=0, W0=None, H0=None, update_W=True, update_H=True ):
+def nmf_beta( V, n_basis, beta, n_iter=10, norm_W=0, norm_H=0, W0=None, H0=None, update_W=True, update_H=True, verbose=0 ):
+    eps = 1e-8
     (F, N) = V.shape
     K = n_basis
     
@@ -90,8 +100,9 @@ def nmf_beta( V, n_basis, beta, n_iter=10, norm_W=0, norm_H=0, W0=None, H0=None,
     else: H = H0
     
     for n in xrange( n_iter ):
-        if update_W is True: W = W * np.dot( np.power( np.dot( W, H ), beta-2 ) * V, H.T ) / ( np.dot( np.power( np.dot( W, H ), beta-1 ), H.T ) )
-        if update_H is True: H = H * ( np.dot( W.T, ( np.power( np.dot( W, H ), beta-2 ) * V ) ) ) / ( np.dot( W.T, np.power( np.dot( W, H ), beta-1 ) ) )
+        if verbose: print 'epoch', n
+        if update_W is True: W = W * np.dot( np.power( clip( np.dot( W, H ), eps ), beta-2 ) * V, H.T ) / clip( np.dot( np.power( np.dot( W, H ), beta-1 ), H.T ), eps )
+        if update_H is True: H = H * ( np.dot( W.T, ( np.power( clip( np.dot( W, H ), eps ), beta-2 ) * V ) ) ) / clip( np.dot( W.T, np.power( np.dot( W, H ), beta-1 ) ), eps )
         if norm_W!=0: W = normalize( W, norm_W )
         if norm_H!=0: H = normalize( H, norm_H )
         
